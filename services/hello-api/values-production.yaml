@@ -1,0 +1,5 @@
+replicaCount: 3
+args: ["-listen=:8080", "-text=Hello World from production"]
+resources:
+  requests: { cpu: 100m, memory: 64Mi }
+  limits: { memory: 256Mi }

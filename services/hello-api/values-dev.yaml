@@ -1,0 +1,4 @@
+args: ["-listen=:8080", "-text=Hello World from dev (helm)"]
+service:
+  type: NodePort
+  nodePort: 30080

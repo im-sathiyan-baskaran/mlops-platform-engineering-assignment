@@ -1,0 +1,4 @@
+replicaCount: 2
+args: ["-listen=:8080", "-text=Hello World from staging"]
+resources:
+  limits: { memory: 128Mi }
