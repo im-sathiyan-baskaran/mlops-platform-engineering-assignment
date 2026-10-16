@@ -3,7 +3,20 @@ replicaCount: 1
 image:
   repository: hashicorp/http-echo
   tag: "1.0"
+  pullPolicy: IfNotPresent
 
+probes:
+  liveness:  { path: /, periodSeconds: 10 }
+  readiness: { path: /, periodSeconds: 5 }
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+    
 args: []          # command-line args for the container
 env: {}           # plain env vars as a map
 

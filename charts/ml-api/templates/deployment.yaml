@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "ml-api.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "ml-api.labels" . | nindent 4 }}
 spec:
@@ -17,13 +18,26 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}          
           {{- with .Values.args }}
           args:
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- end }}                   
           ports:
             - name: http
               containerPort: {{ .Values.containerPort }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}               
           {{- with .Values.env }}
           env:
             {{- range $k, $v := . }}
