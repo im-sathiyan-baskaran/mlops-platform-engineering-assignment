@@ -1,0 +1,47 @@
+suite: deployment
+templates:
+  - templates/deployment.yaml
+release:
+  name: hello-api
+  namespace: dev
+tests:
+  - it: is named after the release and lives in the release namespace
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: hello-api
+      - equal:
+          path: metadata.namespace
+          value: dev
+
+  - it: keeps probes and securityContext even when no args are given
+    set:
+      args: []
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - notExists:
+          path: spec.template.spec.containers[0].args
+
+  - it: renders args when provided
+    set:
+      args: ["-listen=:8080", "-text=hi"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args[1]
+          value: "-text=hi"
+
+  - it: takes replicas from replicaCount
+    set:
+      replicaCount: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3

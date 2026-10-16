@@ -1,0 +1,30 @@
+suite: service
+templates:
+  - templates/service.yaml
+release:
+  name: hello-api
+  namespace: dev
+tests:
+  - it: is ClusterIP without a nodePort by default
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - notExists:
+          path: spec.ports[0].nodePort
+
+  - it: sets nodePort for NodePort services
+    set:
+      service.type: NodePort
+      service.nodePort: 30080
+    asserts:
+      - equal:
+          path: spec.ports[0].nodePort
+          value: 30080
+
+  - it: ignores nodePort when the type is ClusterIP
+    set:
+      service.nodePort: 30080
+    asserts:
+      - notExists:
+          path: spec.ports[0].nodePort

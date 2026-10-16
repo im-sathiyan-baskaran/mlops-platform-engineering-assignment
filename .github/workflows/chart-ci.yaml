@@ -1,0 +1,69 @@
+name: chart-ci
+
+on:
+  pull_request:
+    paths: ["charts/**", "services/**", ".github/workflows/**"]
+  push:
+    branches: [main]
+    tags: ["ml-api-v*"]
+
+permissions:
+  contents: read
+
+env:
+  HELM_VERSION: v3.19.0
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install helm-unittest and kubeconform
+        run: |
+          helm plugin install https://github.com/helm-unittest/helm-unittest.git
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz \
+            | sudo tar xz -C /usr/local/bin kubeconform
+      - name: Lint
+        run: helm lint charts/ml-api --strict -f services/hello-api/values-dev.yaml
+      - name: Unit tests
+        run: helm unittest charts/ml-api
+      - name: Validate rendered manifests (every environment)
+        run: |
+          for env in dev staging production; do
+            echo "== $env"
+            helm template hello-api charts/ml-api -n "$env" \
+              -f "services/hello-api/values-$env.yaml" | kubeconform -strict -summary
+          done
+
+  publish:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/ml-api-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REF_NAME: ${{ github.ref_name }}
+      OWNER: ${{ github.repository_owner }}
+      ACTOR: ${{ github.actor }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Tag must match Chart.yaml version
+        run: |
+          CHART_VERSION=$(grep '^version:' charts/ml-api/Chart.yaml | awk '{print $2}')
+          if [ "ml-api-v${CHART_VERSION}" != "${REF_NAME}" ]; then
+            echo "Tag ${REF_NAME} does not match Chart.yaml version ${CHART_VERSION}"; exit 1
+          fi
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "$ACTOR" --password-stdin
+      - name: Package and push
+        run: |
+          OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          helm package charts/ml-api -d dist
+          helm push dist/ml-api-*.tgz "oci://ghcr.io/${OWNER_LC}/charts"
