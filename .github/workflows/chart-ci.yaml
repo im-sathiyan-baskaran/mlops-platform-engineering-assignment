@@ -2,7 +2,7 @@ name: chart-ci
 
 on:
   pull_request:
-    paths: ["charts/**", "services/**", ".github/workflows/**"]
+    paths: ["charts/**", "services/**", "infra/**", ".github/workflows/**"]
   push:
     branches: [main]
     tags: ["ml-api-v*"]
@@ -37,6 +37,21 @@ jobs:
             helm template hello-api charts/ml-api -n "$env" \
               -f "services/hello-api/values-$env.yaml" | kubeconform -strict -summary
           done
+          
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v3
+      - name: fmt
+        run: terraform fmt -check -recursive
+        working-directory: infra
+      - name: init
+        run: terraform init -backend=false
+        working-directory: infra
+      - name: validate
+        run: terraform validate
+        working-directory: infra          
 
   publish:
     needs: test
