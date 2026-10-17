@@ -43,3 +43,18 @@ autoscaling:
       stabilizationWindowSeconds: 0
     scaleDown:
       stabilizationWindowSeconds: 300
+
+secrets:
+  # Name of a Secret that already exists in the namespace (created out-of-band)
+  existingSecret: ""
+  # Sync from AWS Secrets Manager with External Secrets Operator
+  external:
+    enabled: false
+    apiVersion: external-secrets.io/v1   # use external-secrets.io/v1beta1 on older operators
+    refreshInterval: 1h
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: aws-secrets-manager
+    dataFrom: []
+    #  - extract:
+    #      key: ml/iris-api/dev
