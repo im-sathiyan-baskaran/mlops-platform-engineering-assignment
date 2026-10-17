@@ -2,9 +2,9 @@ image:
   repository: iris-api
   tag: "0.1.0"
 containerPort: 8000
-env:
-  MODEL_NAME: iris-classifier
-  MODEL_VERSION: "1"
+model:
+  name: iris-classifier
+  version: "1"
 probes:
   liveness:
     path: /healthz

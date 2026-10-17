@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,11 +21,11 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}          
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- with .Values.args }}
           args:
             {{- toYaml . | nindent 12 }}
-          {{- end }}                   
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.containerPort }}
@@ -39,10 +40,32 @@ spec:
               port: http
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}               
-          {{- with .Values.env }}
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if or .Values.env .Values.model.name .Values.model.version .Values.datadog.enabled }}
           env:
-            {{- range $k, $v := . }}
+            {{- with .Values.model.name }}
+            - name: MODEL_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.model.version }}
+            - name: MODEL_VERSION
+              value: {{ . | toString | quote }}
+            {{- end }}
+            {{- if .Values.datadog.enabled }}
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
+            - name: DD_SERVICE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/service']
+            - name: DD_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/version']
+            {{- end }}
+            {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
@@ -51,6 +74,6 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ . }}
-          {{- end }}          
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

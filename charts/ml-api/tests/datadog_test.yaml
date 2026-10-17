@@ -1,0 +1,42 @@
+suite: datadog and model metadata
+templates:
+  - templates/deployment.yaml
+release:
+  name: iris-api
+  namespace: staging
+tests:
+  - it: tags env from the namespace and version from the model
+    set:
+      model:
+        name: iris-classifier
+        version: "3"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["tags.datadoghq.com/env"]
+          value: staging
+      - equal:
+          path: spec.template.metadata.labels["tags.datadoghq.com/service"]
+          value: iris-api
+      - equal:
+          path: spec.template.metadata.labels["tags.datadoghq.com/version"]
+          value: "3"
+      - equal:
+          path: spec.template.metadata.labels["ml-platform/model-name"]
+          value: iris-classifier
+
+  - it: falls back to the image tag when no model version is set
+    set:
+      image.tag: "0.9.0"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["tags.datadoghq.com/version"]
+          value: "0.9.0"
+
+  - it: adds no Datadog labels or env when disabled
+    set:
+      datadog.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["tags.datadoghq.com/env"]
+      - notExists:
+          path: spec.template.spec.containers[0].env
