@@ -1,0 +1,18 @@
+image:
+  repository: iris-api
+  tag: "0.1.0"
+containerPort: 8000
+env:
+  MODEL_NAME: iris-classifier
+  MODEL_VERSION: "1"
+probes:
+  liveness:
+    path: /healthz
+  readiness:
+    path: /readyz
+resources:
+  requests:
+    cpu: 100m
+    memory: 200Mi
+  limits:
+    memory: 400Mi
