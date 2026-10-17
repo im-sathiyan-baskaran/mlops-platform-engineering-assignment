@@ -30,3 +30,16 @@ service:
   type: ClusterIP
   port: 80
   nodePort: null
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: null
+  # Scale up fast, scale down slowly (avoids flapping on bursty traffic)
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+    scaleDown:
+      stabilizationWindowSeconds: 300
