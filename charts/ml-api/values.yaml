@@ -58,3 +58,12 @@ secrets:
     dataFrom: []
     #  - extract:
     #      key: ml/iris-api/dev
+
+# First-class model metadata: labels, MODEL_* env vars and the Datadog "version" tag
+model:
+  name: ""
+  version: ""
+
+datadog:
+  enabled: true
+  env: ""          # defaults to the release namespace
