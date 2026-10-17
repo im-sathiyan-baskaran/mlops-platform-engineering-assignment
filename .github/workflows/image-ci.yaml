@@ -1,0 +1,28 @@
+name: image-ci
+
+on:
+  push:
+    tags: ["iris-api-v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    env:
+      REF_NAME: ${{ github.ref_name }}
+      OWNER: ${{ github.repository_owner }}
+      ACTOR: ${{ github.actor }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build and push (immutable tag from the git tag)
+        run: |
+          VERSION="${REF_NAME#iris-api-v}"
+          IMAGE="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')/iris-api"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker build -t "$IMAGE:$VERSION" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            apps/iris-api
+          docker push "$IMAGE:$VERSION"
