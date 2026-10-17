@@ -47,5 +47,10 @@ spec:
               value: {{ $v | quote }}
             {{- end }}
           {{- end }}
+          {{- with (include "ml-api.secretName" .) }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}          
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
