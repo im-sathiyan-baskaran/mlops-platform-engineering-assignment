@@ -1,0 +1,49 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Git ref to deploy (a release tag like ml-api-v0.3.0; use main to try it out)
+        required: true
+      service:
+        description: Folder under services/
+        default: iris-api
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # dev -> staging -> production, one at a time. Each job waits for its
+    # GitHub Environment rules (production requires a human approval).
+    strategy:
+      max-parallel: 1
+      matrix:
+        env: [dev, staging, production]
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.env }}
+    env:
+      SERVICE: ${{ inputs.service }}
+      TARGET: ${{ matrix.env }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - name: Lint and render the plan for this environment
+        run: |
+          helm lint charts/ml-api --strict \
+            -f "services/$SERVICE/values.yaml" -f "services/$SERVICE/values-$TARGET.yaml"
+          helm template "$SERVICE" charts/ml-api -n "$TARGET" \
+            -f "services/$SERVICE/values.yaml" -f "services/$SERVICE/values-$TARGET.yaml" > plan.yaml
+          echo "Objects that would be applied to $TARGET:"
+          grep -E '^kind:' plan.yaml | sort | uniq -c
+      # Real clusters (EKS): authenticate with OIDC, no stored kubeconfig or keys.
+      #   - uses: aws-actions/configure-aws-credentials   (role-to-assume: vars.DEPLOY_ROLE_ARN)
+      #   - run: aws eks update-kubeconfig --name <cluster>
+      #   - run: helm upgrade --install "$SERVICE" charts/ml-api -n "$TARGET" --create-namespace \
+      #            -f services/$SERVICE/values.yaml -f services/$SERVICE/values-$TARGET.yaml \
+      #            --atomic --timeout 5m
