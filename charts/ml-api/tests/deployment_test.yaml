@@ -45,3 +45,10 @@ tests:
       - equal:
           path: spec.replicas
           value: 3
+
+  - it: omits replicas when autoscaling is enabled (the HPA owns the count)
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas

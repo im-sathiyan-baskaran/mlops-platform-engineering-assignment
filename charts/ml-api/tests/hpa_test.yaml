@@ -1,0 +1,49 @@
+suite: hpa
+templates:
+  - templates/hpa.yaml
+release:
+  name: hello-api
+  namespace: staging
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: targets the Deployment and scales on CPU
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: hello-api
+      - equal:
+          path: spec.minReplicas
+          value: 1
+      - equal:
+          path: spec.maxReplicas
+          value: 5
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 70
+
+  - it: adds a memory metric when configured
+    set:
+      autoscaling.enabled: true
+      autoscaling.targetMemoryUtilizationPercentage: 80
+    asserts:
+      - equal:
+          path: spec.metrics[1].resource.name
+          value: memory
+
+  - it: fails the render when no metric is configured
+    set:
+      autoscaling.enabled: true
+      autoscaling.targetCPUUtilizationPercentage: null
+    asserts:
+      - failedTemplate: {}
